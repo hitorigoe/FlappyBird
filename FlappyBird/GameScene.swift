@@ -13,16 +13,20 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
     var scrollNode:SKNode!
     var wallNode:SKNode!
     var bird:SKSpriteNode!
-    
+    var treasureNode:SKNode!
     // 衝突判定カテゴリー ↓追加
     let birdCategory: UInt32 = 1 << 0       // 0...00001
     let groundCategory: UInt32 = 1 << 1     // 0...00010
     let wallCategory: UInt32 = 1 << 2       // 0...00100
     let scoreCategory: UInt32 = 1 << 3      // 0...01000
+    let treasureCategory: UInt32 = 1 << 4       // 0...10000
     // スコア用
     var score = 0  // ←追加
     var scoreLabelNode:SKLabelNode!    // ←追加
     var bestScoreLabelNode:SKLabelNode!    // ←追加
+    var itemscore = 0  // ←追加
+    var itemscoreLabelNode:SKLabelNode!    // ←追加
+    
     let userDefaults:UserDefaults = UserDefaults.standard
     // SKView上にシーンが表示されたときに呼ばれるメソッド
     override func didMove(to view: SKView) {
@@ -37,6 +41,8 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
         scrollNode = SKNode()
         addChild(scrollNode)
         wallNode = SKNode()   // 追加
+        treasureNode = SKNode()
+        scrollNode.addChild(treasureNode)
         scrollNode.addChild(wallNode)   // 追加
         
         // 各種スプライトを生成する処理をメソッドに分割
@@ -44,9 +50,78 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
         setupCloud()
         setupWall()
         setupBird()
-        
+        setupTreasure()
         setupScoreLabel()
     }
+    func setupTreasure() {
+        // 壁の画像を読み込む
+        let treasureTexture = SKTexture(imageNamed:"strawberry")
+        treasureTexture.filteringMode = .linear
+        
+        // 移動する距離を計算
+        let movingDistance = CGFloat(self.frame.size.width + treasureTexture.size().width)
+        
+        // 画面外まで移動するアクションを作成
+        let moveTreasure = SKAction.moveBy(x: -movingDistance, y: 0, duration:4)
+        
+        // 自身を取り除くアクションを作成
+        let removeTreasure = SKAction.removeFromParent()
+        
+        // 2つのアニメーションを順に実行するアクションを作成
+        let treasureAnimation = SKAction.sequence([moveTreasure, removeTreasure])
+        
+        // いちごの画像サイズを取得
+        let strawberrySize = SKTexture(imageNamed: "strawberry").size()
+        
+        // いちごが通り抜ける隙間の長さを鳥のサイズの3倍とする
+        let slit_length = strawberrySize.height * 3
+        
+        // 隙間位置の上下の振れ幅をいちごのサイズの3倍とする
+        let random_y_range = strawberrySize.height * 3
+        
+        // 下の壁のY軸下限位置(中央位置から下方向の最大振れ幅で下の壁を表示する位置)を計算
+        let groundSize = SKTexture(imageNamed: "ground").size()
+        let center_y = groundSize.height + (self.frame.size.height - groundSize.height) / 2
+        let under_treasure_lowest_y = center_y - slit_length / 2 - treasureTexture.size().height / 2 - random_y_range / 2
+        
+        // 壁を生成するアクションを作成
+        let createTreasureAnimation = SKAction.run({
+            // 壁関連のノードを乗せるノードを作成
+            let treasure = SKNode()
+            treasure.position = CGPoint(x: self.frame.size.width + treasureTexture.size().width / 2, y: 0)
+            treasure.zPosition = -50 // 雲より手前、地面より奥
+            
+            // 0〜random_y_rangeまでのランダム値を生成
+            let random_y = CGFloat.random(in: 0..<random_y_range)
+            // Y軸の下限にランダムな値を足して、下の壁のY座標を決定
+            let under_treasure_y = under_treasure_lowest_y + random_y
+            
+            // 下側の壁を作成
+            let under = SKSpriteNode(texture: treasureTexture)
+            under.position = CGPoint(x: 0, y: under_treasure_y)
+            
+            treasure.addChild(under)
+            
+            // 上側の壁を作成
+            let upper = SKSpriteNode(texture: treasureTexture)
+            upper.position = CGPoint(x: 0, y: under_treasure_y + treasureTexture.size().height + slit_length)
+            
+            treasure.addChild(upper)
+            
+            treasure.run(treasureAnimation)
+            
+            self.treasureNode.addChild(treasure)
+        })
+        
+        // 次の壁作成までの時間待ちのアクションを作成
+        let waitAnimation = SKAction.wait(forDuration: 2)
+        
+        // 壁を作成->時間待ち->壁を作成を無限に繰り返すアクションを作成
+        let repeatForeverAnimation1 = SKAction.repeatForever(SKAction.sequence([createTreasureAnimation, waitAnimation]))
+        
+        treasureNode.run(repeatForeverAnimation1)
+    }
+
     func setupScoreLabel() {
         score = 0
         scoreLabelNode = SKLabelNode()
@@ -56,6 +131,15 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
         scoreLabelNode.horizontalAlignmentMode = SKLabelHorizontalAlignmentMode.left
         scoreLabelNode.text = "Score:\(score)"
         self.addChild(scoreLabelNode)
+        
+        itemscore = 0
+        itemscoreLabelNode = SKLabelNode()
+        itemscoreLabelNode.fontColor = UIColor.black
+        itemscoreLabelNode.position = CGPoint(x: 10, y: self.frame.size.height - 120)
+        itemscoreLabelNode.zPosition = 100 // 一番手前に表示する
+        itemscoreLabelNode.horizontalAlignmentMode = SKLabelHorizontalAlignmentMode.left
+        itemscoreLabelNode.text = "ItemScore:\(itemscore)"
+        self.addChild(itemscoreLabelNode)
         
         bestScoreLabelNode = SKLabelNode()
         bestScoreLabelNode.fontColor = UIColor.black
@@ -205,7 +289,7 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
         bird.zRotation = 0
         
         wallNode.removeAllChildren()
-        
+        treasureNode.removeAllChildren()
         bird.speed = 1
         scrollNode.speed = 1
     }
