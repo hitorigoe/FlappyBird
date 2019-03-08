@@ -15,11 +15,11 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
     var bird:SKSpriteNode!
     var treasureNode:SKNode!
     // 衝突判定カテゴリー ↓追加
-    let birdCategory: UInt32 = 1 << 0       // 0...00001
-    let groundCategory: UInt32 = 1 << 1     // 0...00010
-    let wallCategory: UInt32 = 1 << 2       // 0...00100
-    let scoreCategory: UInt32 = 1 << 3      // 0...01000
-    let treasureCategory: UInt32 = 1 << 4       // 0...10000
+    let birdCategory: UInt32 = 1 << 0       // 0...00001 10進数の1
+    let groundCategory: UInt32 = 1 << 1     // 0...00010 10進数の2
+    let wallCategory: UInt32 = 1 << 2       // 0...00100 10進数の4
+    let scoreCategory: UInt32 = 1 << 3      // 0...01000 10進数の8
+    let treasureCategory: UInt32 = 1 << 4   // 0...10000 10進数の16
     // スコア用
     var score = 0  // ←追加
     var scoreLabelNode:SKLabelNode!    // ←追加
@@ -55,7 +55,7 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
     }
     func setupTreasure() {
         // 壁の画像を読み込む
-        let treasureTexture = SKTexture(imageNamed:"strawberry")
+        let treasureTexture = SKTexture(imageNamed:"orange")
         treasureTexture.filteringMode = .linear
         
         // 移動する距離を計算
@@ -70,25 +70,25 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
         // 2つのアニメーションを順に実行するアクションを作成
         let treasureAnimation = SKAction.sequence([moveTreasure, removeTreasure])
         
-        // いちごの画像サイズを取得
-        let strawberrySize = SKTexture(imageNamed: "strawberry").size()
+        // アイテムの画像サイズを取得
+        let orangeSize = SKTexture(imageNamed: "orange").size()
         
-        // いちごが通り抜ける隙間の長さを鳥のサイズの3倍とする
-        let slit_length = strawberrySize.height * 3
+        // アイテムが通り抜ける隙間の長さを鳥のサイズの3倍とする
+        let slit_length = orangeSize.height * 3
         
-        // 隙間位置の上下の振れ幅をいちごのサイズの3倍とする
-        let random_y_range = strawberrySize.height * 3
+        // 隙間位置の上下の振れ幅をアイテムのサイズの3倍とする
+        let random_y_range = orangeSize.height * 3
         
         // 下の壁のY軸下限位置(中央位置から下方向の最大振れ幅で下の壁を表示する位置)を計算
         let groundSize = SKTexture(imageNamed: "ground").size()
         let center_y = groundSize.height + (self.frame.size.height - groundSize.height) / 2
         let under_treasure_lowest_y = center_y - slit_length / 2 - treasureTexture.size().height / 2 - random_y_range / 2
         
-        // 壁を生成するアクションを作成
+        // アイテムを生成するアクションを作成
         let createTreasureAnimation = SKAction.run({
-            // 壁関連のノードを乗せるノードを作成
+            // アイテム関連のノードを乗せるノードを作成
             let treasure = SKNode()
-            treasure.position = CGPoint(x: self.frame.size.width + treasureTexture.size().width / 2, y: 0)
+            treasure.position = CGPoint(x: self.frame.size.width - 50 + treasureTexture.size().width / 2, y: 0)
             treasure.zPosition = -50 // 雲より手前、地面より奥
             
             // 0〜random_y_rangeまでのランダム値を生成
@@ -96,27 +96,24 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
             // Y軸の下限にランダムな値を足して、下の壁のY座標を決定
             let under_treasure_y = under_treasure_lowest_y + random_y
             
-            // 下側の壁を作成
-            let under = SKSpriteNode(texture: treasureTexture)
-            under.position = CGPoint(x: 0, y: under_treasure_y)
+            //
+            let treasurepoint = SKSpriteNode(texture: treasureTexture)
+            treasurepoint.position = CGPoint(x: 0, y: under_treasure_y)
+            treasurepoint.physicsBody = SKPhysicsBody(circleOfRadius: treasureTexture.size().width / 2)
+            treasurepoint.physicsBody?.categoryBitMask = self.treasureCategory
             
-            treasure.addChild(under)
-            
-            // 上側の壁を作成
-            let upper = SKSpriteNode(texture: treasureTexture)
-            upper.position = CGPoint(x: 0, y: under_treasure_y + treasureTexture.size().height + slit_length)
-            
-            treasure.addChild(upper)
+            // 衝突の時に動かないように設定する
+            treasurepoint.physicsBody?.isDynamic = false
+            treasure.addChild(treasurepoint)
             
             treasure.run(treasureAnimation)
             
             self.treasureNode.addChild(treasure)
         })
         
-        // 次の壁作成までの時間待ちのアクションを作成
         let waitAnimation = SKAction.wait(forDuration: 2)
         
-        // 壁を作成->時間待ち->壁を作成を無限に繰り返すアクションを作成
+        // 無限に繰り返すアクションを作成
         let repeatForeverAnimation1 = SKAction.repeatForever(SKAction.sequence([createTreasureAnimation, waitAnimation]))
         
         treasureNode.run(repeatForeverAnimation1)
@@ -173,9 +170,14 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
         bird.physicsBody?.allowsRotation = false    // ←追加
         
         // 衝突のカテゴリー設定
+        
+        
         bird.physicsBody?.categoryBitMask = birdCategory    // ←追加
-        bird.physicsBody?.collisionBitMask = groundCategory | wallCategory    // ←追加
-        bird.physicsBody?.contactTestBitMask = groundCategory | wallCategory    // ←追加
+        bird.physicsBody?.collisionBitMask = groundCategory | wallCategory | treasureCategory   // ←追加
+        bird.physicsBody?.contactTestBitMask = groundCategory | wallCategory | treasureCategory   // ←追加
+        //bird.physicsBody?.collisionBitMask = groundCategory | wallCategory
+        //bird.physicsBody?.contactTestBitMask = groundCategory | wallCategory
+
         
         // アニメーションを設定
         bird.run(flap)
@@ -285,7 +287,7 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
         
         bird.position = CGPoint(x: self.frame.size.width * 0.2, y:self.frame.size.height * 0.7)
         bird.physicsBody?.velocity = CGVector.zero
-        bird.physicsBody?.collisionBitMask = groundCategory | wallCategory
+        bird.physicsBody?.collisionBitMask = groundCategory | wallCategory | treasureCategory
         bird.zRotation = 0
         
         wallNode.removeAllChildren()
@@ -295,14 +297,25 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
     }
     // SKPhysicsContactDelegateのメソッド。衝突したときに呼ばれる
     func didBegin(_ contact: SKPhysicsContact) {
+        print("ide")
+        dump(contact.bodyA)
+        print("ide")
         // ゲームオーバーのときは何もしない
         if scrollNode.speed <= 0 {
             return
         }
-        
+        print("axax")
+        print(contact.bodyA.categoryBitMask)
+        print("avax")
         if (contact.bodyA.categoryBitMask & scoreCategory) == scoreCategory || (contact.bodyB.categoryBitMask & scoreCategory) == scoreCategory {
             // スコア用の物体と衝突した
             print("ScoreUp")
+            print("bitstart")
+            print("contact.bodyA.categoryBitMask")
+            print(contact.bodyA.categoryBitMask)
+            print("scoreCategory")
+            print(scoreCategory)
+            print("bitend")
             score += 1
             scoreLabelNode.text = "Score:\(score)"    // ←追加
             
@@ -314,6 +327,10 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
                 userDefaults.set(bestScore, forKey: "BEST")
                 userDefaults.synchronize()
             } // --- ここまで追加---
+        } else if (contact.bodyA.categoryBitMask & 1) == 1
+            
+        {
+            print("asasasas")
         } else {
             // 壁か地面と衝突した
             print("GameOver")
@@ -328,6 +345,7 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
                 self.bird.speed = 0
             })
         }
+        
     }
     
     func setupWall() {
