@@ -53,71 +53,7 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
         setupTreasure()
         setupScoreLabel()
     }
-    func setupTreasure() {
-        // 壁の画像を読み込む
-        let treasureTexture = SKTexture(imageNamed:"orange")
-        treasureTexture.filteringMode = .linear
-        
-        // 移動する距離を計算
-        let movingDistance = CGFloat(self.frame.size.width + treasureTexture.size().width)
-        
-        // 画面外まで移動するアクションを作成
-        let moveTreasure = SKAction.moveBy(x: -movingDistance, y: 0, duration:4)
-        
-        // 自身を取り除くアクションを作成
-        let removeTreasure = SKAction.removeFromParent()
-        
-        // 2つのアニメーションを順に実行するアクションを作成
-        let treasureAnimation = SKAction.sequence([moveTreasure, removeTreasure])
-        
-        // アイテムの画像サイズを取得
-        let orangeSize = SKTexture(imageNamed: "orange").size()
-        
-        // アイテムが通り抜ける隙間の長さを鳥のサイズの3倍とする
-        let slit_length = orangeSize.height * 3
-        
-        // 隙間位置の上下の振れ幅をアイテムのサイズの3倍とする
-        let random_y_range = orangeSize.height * 3
-        
-        // 下の壁のY軸下限位置(中央位置から下方向の最大振れ幅で下の壁を表示する位置)を計算
-        let groundSize = SKTexture(imageNamed: "ground").size()
-        let center_y = groundSize.height + (self.frame.size.height - groundSize.height) / 2
-        let under_treasure_lowest_y = center_y - slit_length / 2 - treasureTexture.size().height / 2 - random_y_range / 2
-        
-        // アイテムを生成するアクションを作成
-        let createTreasureAnimation = SKAction.run({
-            // アイテム関連のノードを乗せるノードを作成
-            let treasure = SKNode()
-            treasure.position = CGPoint(x: self.frame.size.width - 50 + treasureTexture.size().width / 2, y: 0)
-            treasure.zPosition = -50 // 雲より手前、地面より奥
-            
-            // 0〜random_y_rangeまでのランダム値を生成
-            let random_y = CGFloat.random(in: 0..<random_y_range)
-            // Y軸の下限にランダムな値を足して、下の壁のY座標を決定
-            let under_treasure_y = under_treasure_lowest_y + random_y
-            
-            //
-            let treasurepoint = SKSpriteNode(texture: treasureTexture)
-            treasurepoint.position = CGPoint(x: 0, y: under_treasure_y)
-            treasurepoint.physicsBody = SKPhysicsBody(circleOfRadius: treasureTexture.size().width / 2)
-            treasurepoint.physicsBody?.categoryBitMask = self.treasureCategory
-            
-            // 衝突の時に動かないように設定する
-            treasurepoint.physicsBody?.isDynamic = false
-            treasure.addChild(treasurepoint)
-            
-            treasure.run(treasureAnimation)
-            
-            self.treasureNode.addChild(treasure)
-        })
-        
-        let waitAnimation = SKAction.wait(forDuration: 2)
-        
-        // 無限に繰り返すアクションを作成
-        let repeatForeverAnimation1 = SKAction.repeatForever(SKAction.sequence([createTreasureAnimation, waitAnimation]))
-        
-        treasureNode.run(repeatForeverAnimation1)
-    }
+
 
     func setupScoreLabel() {
         score = 0
@@ -295,27 +231,84 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
         bird.speed = 1
         scrollNode.speed = 1
     }
+    func setupTreasure() {
+        // 壁の画像を読み込む
+        let treasureTexture = SKTexture(imageNamed:"orange")
+        treasureTexture.filteringMode = .linear
+        
+        // 移動する距離を計算
+        let movingDistance = CGFloat(self.frame.size.width + treasureTexture.size().width)
+        
+        // 画面外まで移動するアクションを作成
+        let moveTreasure = SKAction.moveBy(x: -movingDistance, y: 0, duration:4)
+        
+        // 自身を取り除くアクションを作成
+        let removeTreasure = SKAction.removeFromParent()
+        
+        // 2つのアニメーションを順に実行するアクションを作成
+        let treasureAnimation = SKAction.sequence([moveTreasure, removeTreasure])
+        
+        // アイテムの画像サイズを取得
+        let orangeSize = SKTexture(imageNamed: "orange").size()
+        
+        // アイテムが通り抜ける隙間の長さを鳥のサイズの3倍とする
+        let slit_length = orangeSize.height * 3
+        
+        // 隙間位置の上下の振れ幅をアイテムのサイズの3倍とする
+        let random_y_range = orangeSize.height * 3
+        
+        // 下の壁のY軸下限位置(中央位置から下方向の最大振れ幅で下の壁を表示する位置)を計算
+        let groundSize = SKTexture(imageNamed: "ground").size()
+        let center_y = groundSize.height + (self.frame.size.height - groundSize.height) / 2
+        let under_treasure_lowest_y = center_y - slit_length / 2 - treasureTexture.size().height / 2 - random_y_range / 2
+        
+        // アイテムを生成するアクションを作成
+        let createTreasureAnimation = SKAction.run({
+            // アイテム関連のノードを乗せるノードを作成
+            let treasure = SKNode()
+            treasure.position = CGPoint(x: self.frame.size.width - 50 + treasureTexture.size().width / 2, y: 0)
+            treasure.zPosition = -50 // 雲より手前、地面より奥
+            
+            // 0〜random_y_rangeまでのランダム値を生成
+            let random_y = CGFloat.random(in: 0..<random_y_range)
+            // Y軸の下限にランダムな値を足して、下の壁のY座標を決定
+            let under_treasure_y = under_treasure_lowest_y + random_y
+            
+            //
+            let treasurepoint = SKSpriteNode(texture: treasureTexture)
+            treasurepoint.position = CGPoint(x: 0, y: under_treasure_y)
+            treasurepoint.physicsBody = SKPhysicsBody(circleOfRadius: treasureTexture.size().width / 2)
+            treasurepoint.physicsBody?.categoryBitMask = self.treasureCategory
+            
+            // 衝突の時に動かないように設定する
+            treasurepoint.physicsBody?.isDynamic = false
+            treasure.addChild(treasurepoint)
+            
+            treasure.run(treasureAnimation)
+            
+            self.treasureNode.addChild(treasure)
+        })
+        
+        let waitAnimation = SKAction.wait(forDuration: 2)
+        
+        // 無限に繰り返すアクションを作成
+        let repeatForeverAnimation1 = SKAction.repeatForever(SKAction.sequence([createTreasureAnimation, waitAnimation]))
+        
+        treasureNode.run(repeatForeverAnimation1)
+    }
     // SKPhysicsContactDelegateのメソッド。衝突したときに呼ばれる
     func didBegin(_ contact: SKPhysicsContact) {
-        print("ide")
-        dump(contact.bodyA)
-        print("ide")
+
         // ゲームオーバーのときは何もしない
         if scrollNode.speed <= 0 {
             return
         }
-        print("axax")
+        print("bbb")
         print(contact.bodyA.categoryBitMask)
-        print("avax")
+        print(contact.bodyB.categoryBitMask)
+        print("bbb")
         if (contact.bodyA.categoryBitMask & scoreCategory) == scoreCategory || (contact.bodyB.categoryBitMask & scoreCategory) == scoreCategory {
             // スコア用の物体と衝突した
-            print("ScoreUp")
-            print("bitstart")
-            print("contact.bodyA.categoryBitMask")
-            print(contact.bodyA.categoryBitMask)
-            print("scoreCategory")
-            print(scoreCategory)
-            print("bitend")
             score += 1
             scoreLabelNode.text = "Score:\(score)"    // ←追加
             
@@ -327,10 +320,12 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
                 userDefaults.set(bestScore, forKey: "BEST")
                 userDefaults.synchronize()
             } // --- ここまで追加---
-        } else if (contact.bodyA.categoryBitMask & 1) == 1
-            
+        } else if (contact.bodyA.categoryBitMask & treasureCategory) == treasureCategory ||
+            (contact.bodyB.categoryBitMask & treasureCategory) == treasureCategory
         {
-            print("asasasas")
+            //self.treasure.removeFromParent()
+            //treasureNode.removeFromParent()
+            
         } else {
             // 壁か地面と衝突した
             print("GameOver")
