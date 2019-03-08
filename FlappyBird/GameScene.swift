@@ -7,6 +7,7 @@
 //
 
 import SpriteKit
+import AVFoundation
 
 class GameScene: SKScene, SKPhysicsContactDelegate {
     
@@ -28,6 +29,8 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
     var itemscoreLabelNode:SKLabelNode!    // ←追加
     
     let userDefaults:UserDefaults = UserDefaults.standard
+    let sound = NSDataAsset(name: "samplesound")
+    var player: AVAudioPlayer?
     // SKView上にシーンが表示されたときに呼ばれるメソッド
     override func didMove(to view: SKView) {
         // 重力を設定
@@ -52,6 +55,7 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
         setupBird()
         setupTreasure()
         setupScoreLabel()
+        print(111) // 起動時だけ
     }
 
 
@@ -219,8 +223,9 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
     
     func restart() {
         score = 0
+        itemscore = 0
         scoreLabelNode.text = String("Score:\(score)")    // ←追加
-        
+        itemscoreLabelNode.text = String("ItemScore:\(itemscore)")
         bird.position = CGPoint(x: self.frame.size.width * 0.2, y:self.frame.size.height * 0.7)
         bird.physicsBody?.velocity = CGVector.zero
         bird.physicsBody?.collisionBitMask = groundCategory | wallCategory | treasureCategory
@@ -237,7 +242,7 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
         treasureTexture.filteringMode = .linear
         
         // 移動する距離を計算
-        let movingDistance = CGFloat(self.frame.size.width + treasureTexture.size().width)
+        let movingDistance = CGFloat(self.frame.size.width + treasureTexture.size().width + 500)
         
         // 画面外まで移動するアクションを作成
         let moveTreasure = SKAction.moveBy(x: -movingDistance, y: 0, duration:4)
@@ -287,6 +292,7 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
             treasure.run(treasureAnimation)
             
             self.treasureNode.addChild(treasure)
+            
         })
         
         let waitAnimation = SKAction.wait(forDuration: 2)
@@ -303,10 +309,9 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
         if scrollNode.speed <= 0 {
             return
         }
-        print("bbb")
-        print(contact.bodyA.categoryBitMask)
-        print(contact.bodyB.categoryBitMask)
-        print("bbb")
+        //print("bbb")
+        //print(treasureNode.children.remove(at: 1))
+        //print("bbb")
         if (contact.bodyA.categoryBitMask & scoreCategory) == scoreCategory || (contact.bodyB.categoryBitMask & scoreCategory) == scoreCategory {
             // スコア用の物体と衝突した
             score += 1
@@ -323,9 +328,16 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
         } else if (contact.bodyA.categoryBitMask & treasureCategory) == treasureCategory ||
             (contact.bodyB.categoryBitMask & treasureCategory) == treasureCategory
         {
+           
             //self.treasure.removeFromParent()
-            //treasureNode.removeFromParent()
-            
+            //aaa.removeFromParent()
+            treasureNode.removeAllChildren()
+            itemscore += 1
+            itemscoreLabelNode.text = "ItemScore:\(itemscore)"// ←追加
+            if let sound = NSDataAsset(name: "samplesound") {
+                player = try? AVAudioPlayer(data: sound.data)
+                player?.play()
+            }
         } else {
             // 壁か地面と衝突した
             print("GameOver")
